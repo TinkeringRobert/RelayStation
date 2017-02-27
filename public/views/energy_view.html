@@ -1,0 +1,36 @@
+﻿<div>
+	<h1>Energy Test Page</h1>
+	<div>
+		Household     :: {{e.actual.hh_meter}} <br>
+		Energy meter  :: {{e.actual.kwh_meter}} <br>
+		Photo Voltaic :: {{e.actual.pv_meter}}
+	</div>
+	<div>
+		<select ng-change="e.selectionChanged(selectedItem);" ng-model="selectedItem">
+			<option ng-repeat="amount in e.amounts">{{amount}}</option>
+		</select>
+	</div>
+	<div>
+		<nvd3 options="e.options" data="e.data" api="e.api" xAxisTickFormat="xAxisTickFormat_Date_Format()" class="with-3d-shadow with-transitions"></nvd3>
+		<table class="table">
+		  <thead>
+		    <tr>
+					<th>#</th>
+					<th>time</th>
+		      <th>kWh meter</th>
+		      <th>household</th>
+		      <th>pv production</th>
+		    </tr>
+		  </thead>
+			<tbody>
+				<tr ng-repeat="power in e.powers">
+						<th scope="row">{{ $index }}</th>
+						<td>{{ power.timestamp }}</td>
+						<td>{{ power.kwh_meter }}</td>
+						<td>{{ power.hh_meter }}</td>
+						<td>{{ power.pv_meter }}</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>

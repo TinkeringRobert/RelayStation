@@ -1,0 +1,15 @@
+﻿<div>
+    <h2>09 - Routing</h2>
+    <input type="text" value="" ng-model="filterName" class="input-lg" placeholder="typ je naam..." />
+    <ul ng-repeat="module in modules | orderBy:'name' | filter: filterName">
+        <li>{{ module.name | uppercase }} active :: {{ module.time_indicator }}</li>
+    </ul>
+
+    <h2>Detailview opvragen</h2>
+     Voor een controller met Detail-view
+    <li ng-repeat="module in modules">
+        <a ng-href="#/detail/{{ module.id }}/{{ module.name }}">
+            {{ module.name }}
+        </a>
+    </li>
+</div>

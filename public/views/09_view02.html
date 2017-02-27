@@ -1,0 +1,19 @@
+﻿<div>
+	<h1>09 Routing - diverse steden</h1>
+	<ul ng-repeat="node in c.nodes">
+		<li><a ng-href="#/detail/{{ node.id }}/{{ node.node_id }} ">
+				{{ node.id }} - {{ node.node_id }}
+		</a></li>
+	</ul>
+	<br>
+	<h2>Power</h2>
+	<ul ng-repeat="power in c.powers">
+
+		<li>{{ power.hh_meter }}</li>
+	</ul>
+	<br>
+	<ul ng-repeat="city in c.cities">
+
+		<li>{{ city.name }} - {{ city.country }}</li>
+	</ul>
+</div>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!-- Voorbeeld van meerdere controllers in 1 app. Met aparte js-bestanden en een bootstrapper app.js -->
+<!-- 1. Definieer een modulenaam in HTML -->
+<html ng-app="myApp">
+<head>
+	<title>Angular JS Template</title>
+	<meta http-equiv="content-type" content="text/html;charset=UTF-8" />
+	<link href="css/bootstrap.css" rel="stylesheet" />
+	<link href="css/styles.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.1/nv.d3.min.css"/>
+</head>
+<body>
+  <h2>Test Page W.I.P.</h2>
+	<div class="container">
+		<a href="#/Status">Status</a> | <a href="#/steden">Steden </a> | <a href="#/energy">Energy </a>
+		<!-- De view waarin de losse partials/html-bestanden geinjecteerd worden -->
+		<div ng-view></div>
+	</div>
+</div>
+	<!-- Scripts below here -->
+	<script type="text/javascript" src="js/vendor/angular.min.js"></script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.1/nv.d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-nvd3/1.0.5/angular-nvd3.min.js"></script>
+
+	<script type="text/javascript" src="js/vendor/angular-route.min.js"></script>
+	<script type="text/javascript" src="js/vendor/angular-nvd3.min.js"></script>
+	<!-- Custom Scripts -->
+	<script type="text/javascript" src="js/09_app.js"></script>
+	<script type="text/javascript" src="js/statusController.js"></script>
+	<script type="text/javascript" src="js/09_ng_personController.js"></script>
+	<script type="text/javascript" src="js/09_ng_citiesController.js"></script>
+	<script type="text/javascript" src="js/09_ng_detailController.js"></script>
+	<script type="text/javascript" src="js/energyController.js"></script>
+</body>
+</html>
