@@ -9,8 +9,8 @@ module.exports = function(app, nodesDb) {
 		console.log("GET :: /energymeter actual data");
 
 		var options = {
-			host: '10.0.0.200',
-			port: 3000,
+			host: '10.0.0.100',
+			port: 4000,
 			path: '/energymeterdata/1'
 		};
 

@@ -1,8 +1,8 @@
 {
-  "name": "infra",
-  "version": "0.0.3",
-  "description": "Infra structure application",
-  "main": "app.js",
+  "name": "RelayStation",
+  "version": "0.0.4",
+  "description": "RelayStation application (Serial and Udp receivers)",
+  "main": "RelayStation.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

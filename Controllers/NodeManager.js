@@ -32,8 +32,11 @@ module.exports = {
 		setInterval(sendNodeKeepAlive, 10*1000);
 
 		client.on('message', function (topic, message) {
+			winston.debug('-=-=- A');
+
 			// message is Buffer
 			if (topic === handleUdpNodeMessage) {
+				winston.debug('-=-=- B');
 				parser.addNodeIdFromNode(payload.udpMsg);
 
 				addOrUpdateNode(payload.udpMsg);
@@ -43,12 +46,15 @@ module.exports = {
 				}
 			}
 			if (topic == handleSerialNodeMessage) {
-
-				addOrUpdateNode(payload.serialMsg);
-				if (payload.serialMsg.status !== undefined && payload.serialMsg.status === "measure"){
-					storeSensorData(payload.serialMsg);
-					return;
-				}
+				winston.debug('-=-=- C');
+				winston.debug('Received serial msg');
+				serialMsg = JSON.parse(message);
+				winston.debug(serialMsg);
+				addOrUpdateNode(serialMsg);
+				// if (payload.serialMsg.status !== undefined && payload.serialMsg.status === "measure"){
+				// 	storeSensorData(payload.serialMsg);
+				// 	return;
+				// }
 			}
 
 			winston.silly(topic.toString());

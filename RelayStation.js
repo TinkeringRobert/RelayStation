@@ -26,7 +26,7 @@ var dbInit = require('./Config/DbInit');
 var modules = require('./Controllers/ModuleInit');
 var nodesDb = require('./Controllers/NodesDb');
 
-var mdns = require('multicast-dns')()
+// var mdns = require('multicast-dns')()
 
 //*******************
 // 1. Parse forms & JSON in body

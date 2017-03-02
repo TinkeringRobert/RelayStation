@@ -8,7 +8,7 @@ module.exports = function(app) {
 		console.log("GET :: /infra/allModules");
 
     var options = {
-      host: '10.0.0.101',
+      host: '10.0.0.100',
       port: 5000,
       path: '/allModules'
     };

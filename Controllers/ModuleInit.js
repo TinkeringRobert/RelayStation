@@ -10,7 +10,7 @@ module.exports = {
 	    console.log('Starting : ModuleInit');
 		nodesDb.initialize(params, broker);
 		// udp.initialize(params, broker);
-		// serial.initialize(params, broker);
-	    node.initialize(params, broker);
+		serial.initialize(params, broker);
+	  node.initialize(params, broker);
 	}
 }
