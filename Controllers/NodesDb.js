@@ -9,16 +9,16 @@ var db_initalized = false;
 module.exports = {
   initialize: function(params)
   {
-    console.log("Nodes Database initialise");
+    winston.info("Nodes Database initialise");
     const dbPath = path.resolve(__dirname, params.database.nodes)
 		var client  = mqtt.connect(params.mqtt.host);
-    console.log("File :" + dbPath);
+    winston.info("File :" + dbPath);
     db = new sqlite3.Database(dbPath);
     db_initalized = true;
 
-    console.log("Publish NodesDb to infra");
-    console.log(params.mqtt.host + ':' + params.mqtt.prefix + 'module_reg');
-    console.log({name:'NodesDb', type:'application'});
+    winston.info("Publish NodesDb to infra");
+    winston.info(params.mqtt.host + ':' + params.mqtt.prefix + 'module_reg');
+    winston.info({name:'NodesDb', type:'application'});
     client.on('connect', function () {
       // Publish itself
       client.publish(
@@ -27,14 +27,14 @@ module.exports = {
       );
       client.end();
     });
-    console.log("Nodes Database initialized");
-    console.log('-------------------------------------------');
+    winston.info("Nodes Database initialized");
+    winston.info('-------------------------------------------');
 
   },
 
   getNodesFromDb: function(callback)
   {
-    console.log( "Get nodes from database");
+    //console.log( "Get nodes from database");
     if(db === null || db_initalized === false){
       winston.error("Database call not handled db:" + db + " init:" + (db_initalized===true ? "true" : "false"));
       return callback(undefined);
@@ -43,7 +43,7 @@ module.exports = {
       db.all("SELECT id, node_id, node_name, last_seen FROM network_node", function(err, rows) {
         if( err !== null)
         {
-          console.log("ERR: " + err);
+          winston.error("ERR: " + err);
           callback(undefined);
           //db.close();
           return;
@@ -63,7 +63,7 @@ module.exports = {
   },
 
   findNode: function(nodeId, callback) {
-    console.log( "Find node with id :" + nodeId);
+    //console.log( "Find node with id :" + nodeId);
     if(db === null || db_initalized === false){
       winston.error("Database call not handled db:" + db + " init:" + (db_initalized===true ? "true" : "false"));
       return callback(undefined);
@@ -72,7 +72,7 @@ module.exports = {
       db.all("SELECT id, node_id, last_seen FROM network_node WHERE node_id = ?", nodeId, function(err, rows) {
         if( err !== null )
         {
-          console.log("ERR: " + err);
+          winston.error("ERR: " + err);
           callback(undefined);
           //db.close();
           return;
@@ -92,7 +92,7 @@ module.exports = {
   },
 
   addNode: function(nodeId, reportDate){
-    console.log( "Add node with id :" + nodeId + " and date :" + reportDate);
+    //console.log( "Add node with id :" + nodeId + " and date :" + reportDate);
     if(db === null || db_initalized === false){
       winston.error("Database call not handled db:" + db + " init:" + (db_initalized===true ? "true" : "false"));
       return callback(undefined);
@@ -102,14 +102,14 @@ module.exports = {
     stmt.run(nodeId, reportDate, function(err) {
       if (err)
       {
-        console.log(err + " : ");
+        winston.error(err + " : ");
       }
     });
     stmt.finalize();
   },
 
   updateNode: function(nodeId, reportDate){
-    console.log( "Update node with id :" + nodeId + " to date :" + reportDate);
+    //console.log( "Update node with id :" + nodeId + " to date :" + reportDate);
     if(db === null || db_initalized === false){
       winston.error("Database call not handled db:" + db + " init:" + (db_initalized===true ? "true" : "false"));
       return callback(undefined);
@@ -118,13 +118,13 @@ module.exports = {
     db.run("UPDATE network_node SET last_seen = ? WHERE node_id = ?", reportDate, nodeId, function(err) {
       if (err)
       {
-        console.log(err + " : ");
+        winston.error(err + " : ");
       }
     });
   },
 
   getSensorValue: function(tableName, nodeId, limit, callback){
-    console.log( "Get stored for node with id :" + nodeId + " from " + tableName);
+    //console.log( "Get stored for node with id :" + nodeId + " from " + tableName);
     if(db === null || db_initalized === false){
       winston.error("Database call not handled db:" + db + " init:" + (db_initalized===true ? "true" : "false"));
       return callback(undefined);
@@ -134,7 +134,7 @@ module.exports = {
       db.all(query, nodeId, limit, function(err, rows) {
         if( err !== null)
         {
-          console.log("ERR: " + err);
+          winston.error("ERR: " + err);
           callback(undefined);
           //db.close();
           return;
@@ -162,7 +162,7 @@ module.exports = {
       db.all(query, limit, function(err, rows) {
         if( err !== null)
         {
-          console.log("ERR: " + err);
+          winston.error("ERR: " + err);
           callback(undefined);
           //db.close();
           return;
@@ -181,7 +181,7 @@ module.exports = {
   },
 
   storeSensorValue: function(tableName, nodeId, value, reportDate){
-    console.log( "Store " + value + " for node with id :" + nodeId + " and date :" + reportDate + " into " + tableName);
+    //console.log( "Store " + value + " for node with id :" + nodeId + " and date :" + reportDate + " into " + tableName);
     if(db === null || db_initalized === false){
       winston.error("Database call not handled db:" + db + " init:" + (db_initalized===true ? "true" : "false"));
       return callback(undefined);
@@ -192,15 +192,14 @@ module.exports = {
     stmt.run(nodeId, value, reportDate, function(err) {
       if (err)
       {
-        console.log(err + " : ");
+        winston.error(err + " : ");
       }
     });
     stmt.finalize();
   },
 
   storeEnergyMeterValues: function(tableName, nodeId, energy_meter, house_hold, photo_voltaic, reportDate){
-
-    console.log( "Store " + energy_meter + "," + house_hold +  "," + photo_voltaic + " for node with id :" + nodeId + " and date :" + reportDate + " into " + tableName);
+    //console.log( "Store " + energy_meter + "," + house_hold +  "," + photo_voltaic + " for node with id :" + nodeId + " and date :" + reportDate + " into " + tableName);
     if(db === null || db_initalized === false){
       winston.error("Database call not handled db:" + db + " init:" + (db_initalized===true ? "true" : "false"));
       return callback(undefined);
@@ -211,7 +210,7 @@ module.exports = {
     stmt.run(nodeId, energy_meter, house_hold, photo_voltaic, reportDate, function(err) {
       if (err)
       {
-        console.log(err + " : ");
+        winston.errorg(err + " : ");
       }
     });
     stmt.finalize();
@@ -227,7 +226,7 @@ module.exports = {
       db.all(query, function(err, rows) {
         if( err !== null)
         {
-          console.log("ERR: " + err);
+          winston.error("ERR: " + err);
           callback(undefined);
           //db.close();
           return;

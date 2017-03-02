@@ -10,7 +10,7 @@ var winston = require('winston');
 var moment = require('moment');
 
 //{ error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-winston.level = 'silly';
+winston.level = 'info';
 
 // Application settings
 var isWin = /^win/.test(process.platform);
@@ -47,8 +47,8 @@ app.use(express.static(__dirname + '/public'));
 
 // routes ======================================================================
 require('./Api/routes.js')(app, nodesDb);
-require('./Api/meter_data.js')(app, nodesDb);
-require('./Api/status/infra.js')(app);
+require('./Api/meter_data.js')(app, nodesDb, params);
+require('./Api/status/infra.js')(app, params);
 
 function initialize(){
   console.log('Boot Home automation server');
@@ -69,8 +69,8 @@ function initialize(){
   // lets query for an A record for 'brunhilde.local'
   //setInterval(sendNodeKeepAlive, 5000);
   // Activate website
-  app.listen(params.application_port.src, function () {
-      console.log('Server gestart op poort ' + params.application_port.src);
+  app.listen(params.application_port.relaystation, function () {
+      console.log('Server gestart op poort ' + params.application_port.relaystation);
   });
 
   winston.info("System started");

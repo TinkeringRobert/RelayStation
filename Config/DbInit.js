@@ -19,7 +19,7 @@ module.exports = {
     db.serialize(function(err) {
       winston.info("Step 4 : Serialize database    :: " + (err!==undefined ? err : "Success"));
       if(err !== undefined){
-        console.log("err :" + err);
+        winston.error("err :" + err);
       }
       winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
       addControllers(db);

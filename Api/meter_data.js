@@ -2,15 +2,15 @@ var http = require('http');
 var _ = require('lodash');
 var moment = require('moment');
 
-module.exports = function(app, nodesDb) {
+module.exports = function(app, nodesDb, params) {
 
 	// create todo and send back all todos after creation
 	app.get('/energymeterdata/actual', function(req, res) {
 		console.log("GET :: /energymeter actual data");
 
 		var options = {
-			host: '10.0.0.100',
-			port: 4000,
+			host: params.server_ip,
+			port: params.application_port.relaystation,
 			path: '/energymeterdata/1'
 		};
 
@@ -20,20 +20,11 @@ module.exports = function(app, nodesDb) {
 				body += chunk;
 			});
 			request.on('end', function() {
-				//console.log(body);
-				var energy = JSON.parse(body);
-				// _.forEach(modules, function(module){
-				// 	if (module.last_seen !== null && module.last_seen !== undefined){
-				// 		module.time_indicator = moment(module.last_seen).fromNow();
-				// 	}
-				// 	console.log(module);
-				// })
-				console.log(energy);
-				return res.status(200).send(energy);
+				return res.status(200).send(JSON.parse(body));
 			});
 		}).on('error', function(e) {
 			console.log("Got error: " + e.message);
-			return res.status(500).send('getting all modules failed');
+			return res.status(500).send('getting actual energymeterdata failed');
 		});
 	});
 
@@ -41,7 +32,6 @@ module.exports = function(app, nodesDb) {
 	app.get('/energymeterdata/:amount', function(req, res) {
 		console.log("GET :: Current meterdata");
 		var amount = 30;
-
 		if(req.params.amount !== undefined){
 			amount = req.params.amount;
 		}
@@ -50,7 +40,8 @@ module.exports = function(app, nodesDb) {
 			_.forEach(result, function(field) {
 				field.utc = moment.utc(field.timestamp).valueOf();
 			});
-			return res.send(result);
+
+			return res.status(200).send(result);
 		});
 	});
 };

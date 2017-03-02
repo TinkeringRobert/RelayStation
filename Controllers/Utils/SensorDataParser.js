@@ -66,9 +66,7 @@ module.exports = {
       var photo_voltaic = parseInt(message.power3);
       var house_hold = energy_meter - photo_voltaic;
       winston.debug("");
-      winston.debug("energy_meter  = " + energy_meter);
-      winston.debug("house_hold    = " + house_hold);
-      winston.debug("photo_voltaic = " + photo_voltaic);
+      winston.debug("energy_meter = " + energy_meter + "\thouse_hold = " + house_hold + "\tphoto_voltaic = " + photo_voltaic);
       nodesDb.storeEnergyMeterValues('energy_meter',
                                      message.nodeId,
                                      energy_meter,

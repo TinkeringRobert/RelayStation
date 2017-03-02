@@ -13,8 +13,8 @@ module.exports = {
 	{
 		params = Params;
 		client = mqtt.connect(params.mqtt.host);
-		console.log('Starting : NodeManager');
-    console.log('-------------------------------------------');
+		winston.info('Starting : NodeManager');
+    winston.info('-------------------------------------------');
 
 		client.on('connect', function () {
       // Publish itself
@@ -32,29 +32,26 @@ module.exports = {
 		setInterval(sendNodeKeepAlive, 10*1000);
 
 		client.on('message', function (topic, message) {
-			winston.debug('-=-=- A');
 
 			// message is Buffer
 			if (topic === handleUdpNodeMessage) {
-				winston.debug('-=-=- B');
-				parser.addNodeIdFromNode(payload.udpMsg);
+				var udpMsg = JSON.parse(message);
+				parser.addNodeIdFromNode(udpMsg);
 
-				addOrUpdateNode(payload.udpMsg);
-				if (payload.udpMsg.status !== undefined && payload.udpMsg.status === "measure"){
-					storeSensorData(payload.udpMsg);
+				addOrUpdateNode(udpMsg);
+				if (udpMsg.status !== undefined && udpMsg.status === "measure"){
+					storeSensorData(udpMsg);
 					return;
 				}
 			}
 			if (topic == handleSerialNodeMessage) {
-				winston.debug('-=-=- C');
-				winston.debug('Received serial msg');
-				serialMsg = JSON.parse(message);
-				winston.debug(serialMsg);
+				var serialMsg = JSON.parse(message);
+
 				addOrUpdateNode(serialMsg);
-				// if (payload.serialMsg.status !== undefined && payload.serialMsg.status === "measure"){
-				// 	storeSensorData(payload.serialMsg);
-				// 	return;
-				// }
+				if (serialMsg.status !== undefined && serialMsg.status === "measure"){
+					storeSensorData(serialMsg);
+			   	return;
+				}
 			}
 
 			winston.silly(topic.toString());
@@ -63,30 +60,11 @@ module.exports = {
 	}
 }
 
-function sendModuleRegistration(params) {
-	// Publish the channel registration
-	client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:'NodeManager', type:'application'}));
-	client.publish(	params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'udp_node_msg', type:'queue'}));
-	client.publish(	params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'serial_node_msg', type:'queue'}));
-	client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'transmitUdpMsg', type:'queue'}));
-
-	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:'NodeManager', to:'NodesDb'}));
-
-	// Publish relation from to channels
-	client.publish( params.mqtt.prefix + 'modules_relation', JSON.stringify({from:params.mqtt.prefix + 'udp_node_msg', to:'NodeManager'}));
-	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:params.mqtt.prefix + 'serial_node_msg', to:'NodeManager'}));
-	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:'NodeManager', to:params.mqtt.prefix + 'transmitUdpMsg'}));
-}
-
 // Check if the node already exist if not add to the database
 function addOrUpdateNode( message ) {
-	//console.log("Handle addOrUpdateNode for " + nodeId);
-
 	nodesDb.findNode(message.nodeId, function(result){
-		//winston.silly("Nodes found = " + (result?"True":"False"));
 		// Add or update the node Uuid and reportDate
-		if(result === false)
-		{
+		if (result === false) {
 			nodesDb.addNode(message.nodeId, message.date);
 		} else {
 			nodesDb.updateNode(message.nodeId, message.date);
@@ -112,8 +90,23 @@ function sendNodeKeepAlive() {
 	winston.debug('Send hartbeat');
 	if (client !== null && client !== undefined && params !== null && params !== undefined) {
 		client.publish(
-			params.mqtt.prefix + 'transmitUdpMsg',
+			params.mqtt.prefix + 'udp_transmit_msg',
 			JSON.stringify({udpMsg: '&&{"node":"0000"}##'})
 		);
 	}
+}
+
+function sendModuleRegistration(params) {
+	// Publish the channel registration
+	client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:'NodeManager', type:'application'}));
+	client.publish(	params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'udp_node_msg', type:'queue'}));
+	client.publish(	params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'serial_node_msg', type:'queue'}));
+	client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'transmitUdpMsg', type:'queue'}));
+
+	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:'NodeManager', to:'NodesDb'}));
+
+	// Publish relation from to channels
+	client.publish( params.mqtt.prefix + 'modules_relation', JSON.stringify({from:params.mqtt.prefix + 'udp_node_msg', to:'NodeManager'}));
+	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:params.mqtt.prefix + 'serial_node_msg', to:'NodeManager'}));
+	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:'NodeManager', to:params.mqtt.prefix + 'transmitUdpMsg'}));
 }

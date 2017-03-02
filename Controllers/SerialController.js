@@ -3,68 +3,74 @@ var validator = require('validator');
 var winston = require('winston');
 var mqtt = require('mqtt');
 
+var client;
+var port;
+
 module.exports = {
-  initialize: function(params,Broker)
+  initialize: function(params)
   {
-    var client = mqtt.connect(params.mqtt.host);
+    client = mqtt.connect(params.mqtt.host);
     client.on('connect', function () {
-      console.log('Starting : SerialController');
+      winston.info('Starting : SerialController');
+      winston.info('Settings : name_port : ' + params.serial_port.name_port);
+      winston.info('Settings : baudrate  : ' + params.serial_port.baud_rate);
 
-      console.log('Settings : name_port : ' + params.serial_port.name_port);
-      console.log('Settings : baudrate  : ' + params.serial_port.baud_rate);
+      sendModuleRegistration(params);
 
-      var port = new SerialPort(
+      port = new SerialPort(
         params.serial_port.name_port, {
           baudRate: params.serial_port.baud_rate,
           parser: SerialPort.parsers.readline('\n')
         }
       );
 
-      port.close(function (err) {
+      port.on('close', function (err) {
+        winston.info('Serial port closed ' + params.serial_port.name_port);
         if (err) {
-          //return console.log('Error closing port: ', err.message);
+          return winston.error('Serial port closed: ', err.message);
         }
+      });
+
+      port.on('disconnect', function (err) {
+        winston.info('Serial port disconnect ' + params.serial_port.name_port);
+        if (err) {
+          return winston.error('Serial port disconnected: ', err.message);
+        }
+      });
+
+      port.on('error', function(err) {
+        winston.error('Error: ', err.message);
       });
 
       port.open(function (err) {
         if (err) {
-          return console.log('Error opening port: ', err.message);
+          return winston.error('Error: opening port: ', err.message);
         }
-      });
 
-      console.log('Started  : SerialController');
-      console.log('-------------------------------------------');
+        winston.info('Started  : SerialController');
+        winston.info('-------------------------------------------');
 
-      port.on('data', function(message) {
-        var date = new Date();
-        date.setMilliseconds(0);
+        port.on('data', function(message) {
+          var date = new Date();
+          date.setMilliseconds(0);
 
-        winston.silly("Message ::" + message.toString() + "::" + date);
-        parse_serial_msg(message, function(message){
-          winston.debug("Result == " + message);
+          parse_serial_msg(message, function(message){
+            if (message !== null && message !== undefined){
+              var sen_msg = JSON.parse(message);
+              winston.info('ser received: ' + JSON.stringify(sen_msg));
+              sen_msg.date = date;
+              if(sen_msg.nodeId !== undefined){
+                registerNodeRegistration(sen_msg, params);
 
-          if (message !== null && message !== undefined){
-            winston.debug('-=-=- 1');
-            var sen_msg = JSON.parse(message);
-            winston.debug('-=-=- 2');
-            sen_msg.date = date;
-            winston.debug('-=-=- 3');
-            if(sen_msg.nodeId !== undefined){
-              winston.debug('-=-=- 4');
-              client.publish(
-                params.mqtt.prefix + 'serial_node_msg',
-                JSON.stringify(sen_msg)
-              );
-              // broker.publish('handleSerialNodeMessage',
-              //               {serialMsg: sen_msg},
-              //               {async: true});
+                // Transmit to message queue
+                client.publish(
+                  params.mqtt.prefix + 'serial_node_msg',
+                  JSON.stringify(sen_msg)
+                );
+              }
             }
-          }
+          });
         });
-      });
-
-      port.on('error', function(err) {
-        console.log(err);
       });
     });
   }
@@ -99,4 +105,20 @@ function parse_serial_msg(message, callback){
       return callback(str_msg);
     }
   }
+}
+
+function sendModuleRegistration(params) {
+	// Publish the channel registration
+	client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:'SerialController', type:'application'}));
+
+  // Outgoing queues
+	client.publish(	params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'serial_node_msg', type:'queue'}));
+
+  // Publish relate application to outgoing queue
+	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:'SerialController', to:params.mqtt.prefix + 'serial_node_msg'}));
+}
+
+function registerNodeRegistration(message, params) {
+  client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:message.nodeId, type:'node'}));
+  client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:message.nodeId, to:'SerialController'}));
 }

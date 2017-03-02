@@ -1,10 +1,7 @@
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 var winston = require('winston');
-var broker;
-var params;
-//{ error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-var count = 0;
+var mqtt = require('mqtt');
 
 var udp_server_initalized = false;
 var recv_port = 33333;
@@ -12,37 +9,51 @@ var send_port = 22222;
 var recv_host = null;
 var send_host = null;
 
+var handleUdpNodeMessage = null;
+var client;
+var params;
+
 module.exports = {
-  initialize: function(Params, Broker)
+  initialize: function(Params)
   {
-    broker = Broker;
-    console.log('Starting : UdpController');
+    params = Params;
 
-    recv_host = params.udp_server.recv_host;
-    recv_port = params.udp_server.recv_port;
+    client = mqtt.connect(params.mqtt.host);
+    client.on('connect', function () {
+      winston.info('Starting : UdpController');
 
-    send_host = params.udp_server.send_host;
-    send_port = params.udp_server.send_port;
+      recv_host = params.udp_server.recv_host;
+      recv_port = params.udp_server.recv_port;
 
-    console.log('Settings : Recv Host : ' + recv_host);
-    console.log('Settings : Recv Port : ' + recv_port);
-    console.log('');
-    console.log('Settings : Send Host : ' + send_host);
-    console.log('Settings : Send Port : ' + send_port);
+      send_host = params.udp_server.send_host;
+      send_port = params.udp_server.send_port;
 
-    broker.subscribe('transmitMsg', function(event, payload) {
-      transmitMsg(payload.udpMsg);
+      winston.info('Settings : Recv Host : ' + recv_host);
+      winston.info('Settings : Recv Port : ' + recv_port);
+      winston.info('');
+      winston.info('Settings : Send Host : ' + send_host);
+      winston.info('Settings : Send Port : ' + send_port);
+
+      sendModuleRegistration(params);
+
+      // Register the heartbeat message
+      handleUdpTransmitMessage = params.mqtt.prefix + 'udp_transmit_msg';
+      winston.debug('Subscribe to :: ' + handleUdpTransmitMessage);
+      client.subscribe(handleUdpTransmitMessage);
+
+      // Bind to the new server host and port
+      server.bind(recv_port, recv_host);
+
+      udp_server_initalized = true;
+      winston.info('Started  : UdpController');
+      winston.info('-------------------------------------------');
     });
 
-    // Bind to the new server host and port
-    server.bind(recv_port, recv_host);
-
-    udp_server_initalized = true;
-    console.log('Started  : UdpController');
-    console.log('-------------------------------------------');
-    broker.publish('ReportController',
-                  {controllerName: 'UdpController'},
-                  {async: false});
+    client.on('message', function (topic, message) {
+      if (topic === handleUdpTransmitMessage) {
+        transmitMsg(message);
+      }
+    });
   }
 }
 
@@ -54,23 +65,23 @@ server.on('listening', function () {
 server.on('message', function (message, remote) {
     var date = new Date();
     date.setMilliseconds(0);
-    //winston.debug(date.toLocaleString() + ' at recv:' + remote.address + ':' + remote.port +' - ' + message);
-    //winston.debug(remote);
 
     // Parse the received udp message to JSON format
     var udp_res = parse_udp_message(message);
 
-    //winston.info('test transmit function');
-
     if (udp_res !== null)
     {
-      //winston.info('received: ' + JSON.stringify(udp_res));
+      winston.info('udp received: ' + JSON.stringify(udp_res));
       udp_res.date = date;
+      if(udp_res.node !== undefined){
+        registerNodeRegistration(udp_res, params);
 
-      broker.publish('handleUdpNodeMessage',
-                     {udpMsg: udp_res},
-                     {async: true});
-      // node.handleUdpNodeMessage(udp_res, date);
+        // Transmit to message queue
+        client.publish(
+          params.mqtt.prefix + 'udp_node_msg',
+          JSON.stringify(udp_res)
+        );
+      }
     }
 });
 
@@ -80,7 +91,7 @@ server.on('error', function (err) {
 });
 
 server.on('close', function (err) {
-  console.log('server close:');
+  winston.info('server close:');
   server.close();
   // Bind to the new server host and port
   server.bind(recv_port, recv_host);
@@ -94,18 +105,18 @@ function transmitMsg(msg){
   }
 
   var message = new Buffer(msg);
-  var client = dgram.createSocket('udp4');
-  client.bind();
-  client.on("listening", function () {
-    client.setBroadcast(true);
+  var udp_client = dgram.createSocket('udp4');
+  udp_client.bind();
+  udp_client.on("listening", function () {
+    udp_client.setBroadcast(true);
 
-    client.send(message, 0, message.length, send_port, send_host, function(err, bytes) {
+    udp_client.send(message, 0, message.length, send_port, send_host, function(err, bytes) {
         if (err) {
-          client.close();
+          udp_client.close();
           throw err;
         }
-        console.log('UDP message sent to ' + send_host +':'+ send_port);
-        client.close();
+        winston.debug('UDP message sent to ' + send_host +':'+ send_port);
+        udp_client.close();
     });
   });
 };
@@ -133,20 +144,31 @@ function parse_udp_message(message)
 
     if(start_index > -1 && end_index > -1)
     {
-        //winston.silly('Message substring');
-
         var str_msg = message.toString().substring(start_index+2, end_index);
 
-        //winston.silly(str_msg);
-
         var received = JSON.parse(str_msg);
+
         if(received.node === undefined || received.node === "0000"){
           return null;
         }
 
-        //winston.silly('Parsed to JSON');
-        //winston.silly(received);
         return received;
     }
     return null;
 };
+
+function sendModuleRegistration(params) {
+	// Publish the channel registration
+	client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:'UdpController', type:'application'}));
+
+  // Outgoing queues
+	client.publish(	params.mqtt.prefix + 'module_reg', JSON.stringify({name:params.mqtt.prefix + 'udp_node_msg', type:'queue'}));
+
+  // Publish relate application to outgoing queue
+	client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:'UdpController', to:params.mqtt.prefix + 'udp_node_msg'}));
+}
+
+function registerNodeRegistration(message, params) {
+  client.publish( params.mqtt.prefix + 'module_reg', JSON.stringify({name:message.node, type:'node'}));
+  client.publish(	params.mqtt.prefix + 'modules_relation', JSON.stringify({from:message.nodeId, to:'UdpController'}));
+}
