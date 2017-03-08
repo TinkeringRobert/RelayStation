@@ -48,10 +48,10 @@ module.exports = function(app, nodesDb, params) {
 	});
 
 	// create todo and send back all todos after creation
-	app.get('/energymeterdata/:day', function(req, res) {
+	app.get('/energymeterdata/day/:day', function(req, res) {
 		console.log("GET :: Day meterdata");
 
-		nodesDb.getEnergyMeterValueDay(day, function(result){
+		nodesDb.getEnergyMeterValueDay(req.params.day, function(result){
 			_.forEach(result, function(field) {
 				field.utc = moment.utc(field.timestamp).valueOf();
 			});

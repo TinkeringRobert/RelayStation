@@ -22,7 +22,7 @@
 					},
 					x: function(d){ return d.x; },
 					y: function(d){ return d.y; },
-					useInteractiveGuideline: true,
+					useInteractiveGuideline: false,
 					dispatch: {
 							stateChange: function(e){ console.log("stateChange"); },
 							changeState: function(e){ console.log("changeState"); },
@@ -30,11 +30,11 @@
 							tooltipHide: function(e){ console.log("tooltipHide"); }
 					},
 					xAxis: {
-							axisLabel: 'Time (ms)',
-							tickFormat: function(d) { return d3.time.format('%m-%d :: %H:%M')(new Date(d));}
+							axisLabel: 'Time',
+						  tickFormat: function(d) { return d3.time.format('%m-%d :: %H:%M')(new Date(d));}
 					},
 					yAxis: {
-							axisLabel: 'Voltage (v)',
+							axisLabel: 'Consumption (watt)',
 							tickFormat: function(d){
 									return d3.format('.02f')(d);
 							},
@@ -45,7 +45,7 @@
 					},
 			},
 			title: {
-					enable: true,
+					enable: false,
 					text: 'Title for Line Chart'
 			}
 		};
@@ -58,8 +58,7 @@
 		getMeterData($http, vm.selectedItem, function(data){
 			vm.powers = data;
 
-			parseChartData(vm, $filter);
-			console.log(vm.data);
+			parseChartData(vm);
 		});
 
     vm.fight = function() {
@@ -69,7 +68,7 @@
 			vm.stop = $interval(function() {
 				getMeterActual($http, function(data){
 					console.log('int: actual power');
-					console.log(data);
+					//console.log(data);
 					parseActualData(vm, data);
 				});
 	    }, 30000);
@@ -78,7 +77,7 @@
 		// Initialise data for the table
 		getMeterActual($http, function(data){
 			console.log('actual power');
-			console.log(data);
+			//console.log(data);
 			parseActualData(vm, data);
 			vm.fight();
 		});
@@ -91,9 +90,9 @@
 				 vm.powers = [];
 				 vm.powers = data;
 				 parseChartData(vm, $filter);
-				 console.log(vm.powers);
+				 //console.log(vm.powers);
 			 });
-			 console.log('Should have reloaded by now');
+			 //console.log('Should have reloaded by now');
 		}
 
 		vm.stopFight = function() {
@@ -125,56 +124,47 @@ function parseActualData(vm, data){
 	console.log('vm.actual.pv_meter ' + vm.actual.pv_meter)
 };
 
-function parseChartData(vm, $filter){
+function parseChartData(vm){
 	vm.data = [];
 
 	var line_kwh = {};
+	var line_hh = {};
+	var line_pv = {};
+
 	line_kwh.key = "Energy Meter";
 	line_kwh.strokeWidth = 2;
-	//line_kwh.classed = "dashed";
 	line_kwh.color = "#ff0000";
 	line_kwh.values = [];
-	//line_kwh.values.push({x:0,y:0});
-	for (i in vm.powers) {
-		var element = {};
-		element.x = vm.powers[i].utc;
-		element.y = -vm.powers[i].kwh_meter;
-		line_kwh.values.push(element);
-	}
-	//line_kwh.values.push({x:num,y:0});
-	vm.data.push(line_kwh);
 
-
-	var line_hh = {};
 	line_hh.key = "Household Meter";
 	line_hh.strokeWidth = 2;
-	//line_hh.classed = "dashed";
 	line_hh.color = "#00ff00";
 	line_hh.values = [];
-	//line_hh.values.push({x:0,y:0});
-	for (i in vm.powers) {
-		var element = {};
-		//console.log(vm.powers[i].timestamp);
-		element.x = vm.powers[i].utc;
-		element.y = vm.powers[i].hh_meter;
-		line_hh.values.push(element);
-	}
-	//line_hh.values.push({x:num,y:0});
-	vm.data.push(line_hh);
 
-
-	var line_pv = {};
 	line_pv.key = "Photovoltaic Meter";
 	line_pv.strokeWidth = 2;
 	line_pv.color = "#0000ff";
 	line_pv.values = [];
+
 	for (i in vm.powers) {
-		var element = {};
-		//console.log($filter('date')(vm.powers[i].timestamp, 'HH:mm:ss'));
-		element.x = vm.powers[i].utc;
-		element.y = -vm.powers[i].pv_meter;
-		line_pv.values.push(element);
+		var kwhelement = {};
+		kwhelement.x = vm.powers[i].utc;
+		kwhelement.y = -vm.powers[i].kwh_meter;
+		line_kwh.values.push(kwhelement);
+
+		var hhelement = {};
+		hhelement.x = vm.powers[i].utc;
+		hhelement.y = vm.powers[i].hh_meter;
+		line_hh.values.push(hhelement);
+
+		var pvelement = {};
+		pvelement.x = vm.powers[i].utc;
+		pvelement.y = -vm.powers[i].pv_meter;
+		line_pv.values.push(pvelement);
 	}
+
+	vm.data.push(line_kwh);
+	vm.data.push(line_hh);
 	vm.data.push(line_pv);
 
 	vm.api.refresh();
@@ -182,7 +172,10 @@ function parseChartData(vm, $filter){
 
 function getMeterData($http, amount, callback){
 	console.log('getMeterData amount ' + amount);
-	$http.get('/energymeterdata/' + amount)
+	var date = new Date();
+	date.setMilliseconds(0);
+
+	$http.get('/energymeterdata/day/' + date)
 		.success(function(data){
 			return callback(data);
 		})

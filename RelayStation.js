@@ -10,7 +10,7 @@ var winston = require('winston');
 var moment = require('moment');
 
 //{ error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-winston.level = 'info';
+winston.level = 'debug';
 
 // Application settings
 var isWin = /^win/.test(process.platform);
