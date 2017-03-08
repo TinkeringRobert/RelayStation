@@ -8,6 +8,8 @@ module.exports = function(app, nodesDb, params) {
 	app.get('/energymeterdata/actual', function(req, res) {
 		console.log("GET :: /energymeter actual data");
 
+		console.log(params.server_ip);
+		console.log(params.application_port.relaystation);
 		var options = {
 			host: params.server_ip,
 			port: params.application_port.relaystation,
@@ -37,6 +39,19 @@ module.exports = function(app, nodesDb, params) {
 		}
 
 		nodesDb.getEnergyMeterValue(amount, function(result){
+			_.forEach(result, function(field) {
+				field.utc = moment.utc(field.timestamp).valueOf();
+			});
+
+			return res.status(200).send(result);
+		});
+	});
+
+	// create todo and send back all todos after creation
+	app.get('/energymeterdata/:day', function(req, res) {
+		console.log("GET :: Day meterdata");
+
+		nodesDb.getEnergyMeterValueDay(day, function(result){
 			_.forEach(result, function(field) {
 				field.utc = moment.utc(field.timestamp).valueOf();
 			});
