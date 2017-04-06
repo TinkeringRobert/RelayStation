@@ -1,116 +1,118 @@
 var winston = require('winston');
 var sqlite3 = require('sqlite3').verbose();
-var mqtt = require('mqtt');
-
-var client;
+var async = require('async');
+var migrations = require('./migrations');
 
 module.exports = {
-  initialize: function(params){
-
-    winston.info('Starting : dbInit');
+  initialize: function(dbFile, name, cb){
+    winston.info('Starting : ' + name + ' DbInit');
     winston.info('-------------------------------------------');
-    winston.info("Step 1 : Initialise database   :: " + params.database.nodes);
+		winston.info("Step 1 : Initialise database   :: " + dbFile);
     winston.info("Step 2 : At location           :: " + __dirname);
 
-    var db = new sqlite3.Database(params.database.nodes);
+    var db = new sqlite3.Database(dbFile);
     winston.info("Step 3 : Open database at path :: " + db);
-
-
+    var step = 4;
     db.serialize(function(err) {
-      winston.info("Step 4 : Serialize database    :: " + (err!==undefined ? err : "Success"));
-      if(err !== undefined){
-        winston.error("err :" + err);
-      }
-      winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
-      addControllers(db);
-      winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
-      addNetworkNode(db);
-      winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
-      addBatteryNode(db);
-      winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
-      addTemperatureNode(db);
-      winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
-      addHumidityNode(db);
-      winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
-      addEnergyMeterDb(db);
-      winston.info("Step 5 : Seed the database     :: " + (err!==undefined ? err : "Success"));
-    });
-    winston.info("Step 6 : Close database file   :: Success");
-    db.close();
-    winston.info("Step 7 : Database created      :: Success");
+      var migrationIndex = getCurrentMigrationIndex(db, dbFile, function(database, migrationIndex) {
+        if (migrationIndex === -1) {
+          winston.error('Error while creating the migrations');
+          return cb();
+        }
+        var migrationFunctions = migrations.getList();
 
-    var client = mqtt.connect(params.mqtt.host);
+        if (migrationIndex !== migrationFunctions.length) {
 
-    client.on('connect', function () {
-      winston.info('Report DbInit to infrastructure');
-      client.publish(params.mqtt.prefix + 'module_reg', JSON.stringify({name:'NodesDbInit', type:'application'}));
-      client.end();
+        } else {
+          winston.info('Step 4 : No migrations needed ');
+          winston.info('-------------------------------------------');
+      		return cb();
+        }
+        winston.info("Step " + step++ + " : total migrations :" + migrationFunctions.length);
+        winston.info("Step " + step++ + " : start migration at :" + migrationIndex);
+        winston.info("Step " + step++ + " : create migrations list")
+        var migArray = [];
+
+        for(migrationIndex; migrationIndex < migrationFunctions.length; migrationIndex++) {
+          migArray.push(
+            {
+              func: migrationFunctions[migrationIndex].func,
+              index: (migrationIndex + 1),
+              name: migrationFunctions[migrationIndex].name
+            });
+        }
+
+        db = database;
+
+        async.eachLimit(migArray, 1, function(migration,callback){
+          winston.info("Step " + step++ + " : Run migration with index: " + migration.index + " function : " + migration.name );
+          migration.func(db, function() {
+            addMigration(db, step++, migration.index, migration.name);
+            callback();
+          });
+
+        }, function(err){
+          if (err) {
+            winston.error('Error durring database migrations :' + err);
+          }
+          winston.info("Step " + step++ + " : Database created      :: Success");
+          winston.info('-------------------------------------------');
+      		db.close();
+          return cb();
+        });
+      });
     });
   }
 }
 
-// -------------------------------------------------
-// Database table creators
-// -------------------------------------------------
-function addControllers(db){
-  winston.info("Add controllers database table");
+function getCurrentMigrationIndex(db, dbFile, callback){
+  var currentCount = 0;
+  var database = db;
+  database.all("SELECT MAX(count) as count FROM Migrations", function(err, rows) {
+    if (err !== null )
+    {
+      if ( err.errno === 1 ) {
+        var db = new sqlite3.Database(dbFile);
+        db.serialize(function(err) {
+          winston.error('create Migrations table');
+          db.run("CREATE TABLE IF NOT EXISTS Migrations " +
+                "(id        INTEGER   PRIMARY KEY   AUTOINCREMENT, " +
+                "count      INTEGER, " +
+                "timestamp  DATETIME, " +
+                "action     CHAR(40) NOT NULL) ");
+          database = db;
+        });
+      } else {
+        winston.error('retrieving Migrations : Err:' + err);
+        return callback(null, -1);
+      }
+      currentCount = addMigration(database, -1, currentCount, 'createMigrations');
+      return callback(database, currentCount);
+    }
 
-  db.run("CREATE TABLE IF NOT EXISTS controllers " +
-        "(id             INTEGER   PRIMARY KEY   AUTOINCREMENT, " +
-        "controller_name CHAR(255) NOT NULL, " +
-        "last_seen       DATETIME, " +
-        "first_seen      DATETIME) ");
-
-  //db.run("ALTER TABLE controllers ADD COLUMN first_seen DATETIME");
+    if (rows !== undefined && rows.length === 1)
+    {
+      return callback(database,rows[0].count);
+    }
+    else {
+      return callback(null, -1);
+    }
+  });
 }
 
-function addNetworkNode(db){
-  winston.info("Add network_node database table");
+function addMigration(db, step, count, action){
+  winston.info("Step " + step + " : Insert into migration table migration : " + count);
+  // Prepare and add the first migration
+  var stmt = db.prepare("INSERT INTO Migrations (count, timestamp, action) VALUES (?,?,?)");
+  var date = new Date();
+  date.setMilliseconds(0);
 
-  db.run("CREATE TABLE IF NOT EXISTS network_node " +
-        "(id        INTEGER            PRIMARY KEY   AUTOINCREMENT, " +
-        "node_id    CHAR(4)   NOT NULL, " +
-        "last_seen  DATETIME)");
-
-  //db.run("ALTER TABLE network_node ADD COLUMN node_name CHAR(16)");
-  //db.run("ALTER TABLE network_node ADD COLUMN first_seen DATETIME");
-}
-
-function addBatteryNode(db){
-  winston.info("Add battery_node database table");
-
-  db.run("CREATE TABLE IF NOT EXISTS battery_node " +
-        "(id       INTEGER            PRIMARY KEY   AUTOINCREMENT, " +
-        "node_id   CHAR(4)   NOT NULL, " +
-        "timestamp DATETIME, " +
-        "value     REAL)");
-}
-
-function addTemperatureNode(db){
-  winston.info("Add temperature_node database table");
-  db.run("CREATE TABLE IF NOT EXISTS temperature_node " +
-        "(id       INTEGER            PRIMARY KEY   AUTOINCREMENT, " +
-        "node_id   CHAR(4)   NOT NULL, " +
-        "timestamp DATETIME, " +
-        "value     REAL)");
-}
-
-function addHumidityNode(db){
-  winston.info("Add humidity_node database table");
-  db.run("CREATE TABLE IF NOT EXISTS humidity_node " +
-        "(id       INTEGER            PRIMARY KEY   AUTOINCREMENT, " +
-        "node_id   CHAR(4)   NOT NULL, " +
-        "timestamp DATETIME, " +
-        "value     REAL)");
-}
-
-function addEnergyMeterDb(db){
-  winston.info("Add energy_meter database table");
-  db.run("CREATE TABLE IF NOT EXISTS energy_meter " +
-        "(id       INTEGER            PRIMARY KEY   AUTOINCREMENT, " +
-        "node_id   CHAR(4)   NOT NULL, " +
-        "timestamp DATETIME, " +
-        "kwh_meter REAL," +
-        "hh_meter  REAL," +
-        "pv_meter  REAL)");
+  stmt.run(count ,date, action, function(err) {
+    if (err)
+    {
+      winston.error('addMigration : ' + count + ', Err:' + err);
+    }
+  });
+  stmt.finalize();
+  return count;
 }

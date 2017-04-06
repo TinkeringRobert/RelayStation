@@ -50,12 +50,19 @@ module.exports = function(app, nodesDb, params) {
 	// create todo and send back all todos after creation
 	app.get('/energymeterdata/day/:day', function(req, res) {
 		console.log("GET :: Day meterdata");
-
+		var start = new Date();
 		nodesDb.getEnergyMeterValueDay(req.params.day, function(result){
+			// for(var index = 0; index < result.length; ++index) {
+			// 	result[index].utx = moment.utc(result[index].timestamp).valueOf();
+			// }
+			var before = new Date();
 			_.forEach(result, function(field) {
 				field.utc = moment.utc(field.timestamp).valueOf();
 			});
-
+			var end = new Date();
+			console.log('db call = ' + (before - start));
+			console.log('data    = ' + (end - before));
+			console.log('total   = ' + (end - start));
 			return res.status(200).send(result);
 		});
 	});

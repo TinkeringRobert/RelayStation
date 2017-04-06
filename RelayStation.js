@@ -10,7 +10,7 @@ var winston = require('winston');
 var moment = require('moment');
 
 //{ error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-winston.level = 'debug';
+winston.level = 'info';
 
 // Application settings
 var isWin = /^win/.test(process.platform);
@@ -55,25 +55,26 @@ function initialize(){
   console.log(JSON.stringify(params,null,4));
 
   //infraRecv.initialize(params, broker);
-  dbInit.initialize(params);
+  dbInit.initialize(params.database.nodes, 'RelayStation', function() {
+    modules.initialize(params);
+    // mdns.on('response', function(response) {
+    //   console.log('got a response packet:', response);
+    // });
 
-  modules.initialize(params);
-  // mdns.on('response', function(response) {
-  //   console.log('got a response packet:', response);
-  // });
+    // mdns.on('query', function(query) {
+    //   console.log('got a query packet:', query)
+    // });
 
-  // mdns.on('query', function(query) {
-  //   console.log('got a query packet:', query)
-  // });
+    // lets query for an A record for 'brunhilde.local'
+    //setInterval(sendNodeKeepAlive, 5000);
+    // Activate website
+    app.listen(params.application_port.relaystation, function () {
+        console.log('Server gestart op poort ' + params.application_port.relaystation);
+    });
 
-  // lets query for an A record for 'brunhilde.local'
-  //setInterval(sendNodeKeepAlive, 5000);
-  // Activate website
-  app.listen(params.application_port.relaystation, function () {
-      console.log('Server gestart op poort ' + params.application_port.relaystation);
+    winston.info("System started");
   });
 
-  winston.info("System started");
 };
 
 initialize();

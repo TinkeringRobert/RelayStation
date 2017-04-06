@@ -203,7 +203,6 @@ module.exports = {
         //console.log(rows);
         if (rows !== undefined && rows.length > 0)
         {
-          //console.log(row.id + ": " + row.node_id + ": ", row.last_seen);
           callback(rows);
         }
         else {

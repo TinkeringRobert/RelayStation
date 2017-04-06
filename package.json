@@ -9,6 +9,7 @@
   "author": "Robert Kappert",
   "license": "MIT",
   "dependencies": {
+    "async": "^2.3.0",
     "body-parser": "^1.12.4",
     "bonjour": "^3.5.0",
     "express": "^4.12.4",
