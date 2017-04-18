@@ -47,6 +47,7 @@ module.exports = {
 			if (topic == handleSerialNodeMessage) {
 				var serialMsg = JSON.parse(message);
 
+				winston.debug('Recieved serial message');
 				addOrUpdateNode(serialMsg);
 				if (serialMsg.status !== undefined && serialMsg.status === "measure"){
 					storeSensorData(serialMsg);

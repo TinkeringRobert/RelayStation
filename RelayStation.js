@@ -10,7 +10,7 @@ var winston = require('winston');
 var moment = require('moment');
 
 //{ error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-winston.level = 'info';
+winston.level = 'debug';
 
 // Application settings
 var isWin = /^win/.test(process.platform);
@@ -37,7 +37,14 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 
 app.get('/status', function (req, res) {
-  res.json({status: 'online', application: 'homecontroller'});
+  res.json(
+    {
+      status: 'online',
+      application: pjson.name,
+      version: pjson.version,
+      description: pjson.description
+    }
+  );
 });
 
 //****************
@@ -51,11 +58,10 @@ require('./Api/meter_data.js')(app, nodesDb, params);
 require('./Api/status/infra.js')(app, params);
 
 function initialize(){
-  console.log('Boot Home automation server');
-  console.log(JSON.stringify(params,null,4));
+  console.log('Boot Home automation server :: ' + pjson.name + ' :: ' + pjson.version);
 
   //infraRecv.initialize(params, broker);
-  dbInit.initialize(params.database.nodes, 'RelayStation', function() {
+  dbInit.initialize(params.database.nodes, pjson.name, function() {
     modules.initialize(params);
     // mdns.on('response', function(response) {
     //   console.log('got a response packet:', response);
@@ -68,8 +74,8 @@ function initialize(){
     // lets query for an A record for 'brunhilde.local'
     //setInterval(sendNodeKeepAlive, 5000);
     // Activate website
-    app.listen(params.application_port.relaystation, function () {
-        console.log('Server gestart op poort ' + params.application_port.relaystation);
+    app.listen(params.application_port.relay_station, function () {
+        console.log('Server gestart op poort ' + params.application_port.relay_station);
     });
 
     winston.info("System started");
