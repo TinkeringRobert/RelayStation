@@ -1,6 +1,7 @@
 var pjson = require('./package.json');
 
 // External requires
+const path = require('path');
 var express = require('express');
 var bodyParser = require('body-parser');
 var jwt = require('jwt-simple');
@@ -8,6 +9,7 @@ var _ = require('lodash');
 var app = express();
 var winston = require('winston');
 var moment = require('moment');
+var fs = require('fs');
 
 //{ error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
 winston.level = 'debug';
@@ -47,6 +49,32 @@ app.get('/status', function (req, res) {
   );
 });
 
+app.get('/download', function(req, res){
+  var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  winston.debug("Request firmware from " + ip);
+  var file = __dirname + '/NodeFw/wifiPull.ino.generic.bin';
+  res.download(file); // Set disposition and send it.
+});
+
+app.get('/firmware/:nodeId', function(req, res){
+  var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  winston.debug(req.params.nodeId);
+  winston.debug("node " + req.params.nodeId + " request firmware version from " + ip);
+
+  res.status(200).send("1.4");
+});
+
+app.get('/download/:nodeId', function(req, res){
+  var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  winston.debug(req.params.nodeId);
+  winston.debug("node " + req.params.nodeId + " request firmware from " + ip);
+  var file = __dirname + "/NodeFw/_" + req.params.nodeId + ".ino.generic.bin";
+  if (fs.existsSync(file)) {
+    res.download(file); // Set disposition and send it.
+  } else {
+    res.status(404).send("file : " + file + " does not exist");
+  }
+});
 //****************
 // 2. Stel middleware in voor serveren van statische bestanden (HTML, CSS, images)
 //****************
